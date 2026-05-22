@@ -2,18 +2,53 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>理論化学</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
-#home,#review-screen,#quiz-screen{display:none;}
+body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ボトムナビ */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:64px;
+  display:flex;
+  border-top:1px solid;
+  z-index:100;
+}
+.nav-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;font-size:10px;font-weight:600;font-family:'Noto Sans JP',sans-serif;
+  border:none;background:none;transition:opacity 0.15s;
+}
+.nav-tab .nav-icon{font-size:22px;line-height:1;}
+
+/* 各画面共通：ボトムナビ分のパディング */
+.screen{
+  display:none;
+  padding-bottom:72px;
+  min-height:100vh;
+}
+.screen.active{display:block;}
+
+/* クイズ・復習・索引画面はボトムナビ非表示 */
+#quiz-screen, #review-screen, #glossary-screen{
+  display:none;
+  padding-bottom:0;
+  min-height:100vh;
+}
+#quiz-screen.active, #review-screen.active, #glossary-screen.active{display:block;}
+
+/* 共通スタイル */
 .progress-bar-wrap{height:4px;}
 .progress-bar-fill{height:4px;transition:width 0.3s;}
 .quiz-body{padding:1.5rem;}
 .choices{display:flex;flex-direction:column;gap:10px;}
 .choice-btn{display:block;width:100%;text-align:left;padding:16px 18px;border-radius:12px;cursor:pointer;font-size:15px;font-family:'Noto Sans JP',sans-serif;line-height:1.5;font-weight:500;-webkit-appearance:none;appearance:none;}
 .choice-btn:disabled{cursor:default;}
-.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;}.prev-btn{padding:14px 20px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:'Noto Sans JP',sans-serif;display:none;}
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;}
+.prev-btn{padding:14px 20px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:'Noto Sans JP',sans-serif;display:none;}
 .next-btn{padding:14px 32px;border-radius:12px;border:none;color:#fff;cursor:pointer;font-size:15px;font-weight:700;font-family:'Noto Sans JP',sans-serif;display:none;}
 .exp-box{margin-top:1.25rem;padding:14px 16px;border-radius:12px;font-size:13px;line-height:1.9;border-left:4px solid;}
 .memo-box{margin-top:8px;padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.7;border-left:3px solid #D97706;}
@@ -30,36 +65,102 @@ body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
 </head>
 <body>
 
-<!-- ホーム -->
-<div id="home">
-  <div style="padding:1.5rem 1.5rem 1rem;display:flex;align-items:flex-start;justify-content:space-between">
+<!-- ホーム画面 -->
+<div id="home-screen" class="screen">
+  <!-- ヘッダー -->
+  <div id="home-header" style="padding:1.5rem 1.5rem 1rem;display:flex;align-items:flex-start;justify-content:space-between">
     <div>
-      <div id="app-title" style="font-size:22px;font-weight:700">⚗️ 理論化学</div>
+      <div id="app-title" style="font-size:24px;font-weight:700">⚗️ 理論化学</div>
       <div id="app-sub" style="font-size:13px;margin-top:4px">入試化学の基礎固め</div>
     </div>
     <button id="theme-btn" onclick="toggleTheme()" style="width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;border:1px solid">🌙</button>
   </div>
-  <div style="display:flex;gap:10px;padding:0 1.5rem 1.5rem">
-    <div id="sc1" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-total" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">0</div><div style="font-size:11px;margin-top:2px">総回答数</div></div>
-    <div id="sc2" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-correct" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">0</div><div style="font-size:11px;margin-top:2px">正解数</div></div>
-    <div id="sc3" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-acc" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">—</div><div style="font-size:11px;margin-top:2px">正答率</div></div>
+
+  <!-- 帯グラフ（チャプター別進捗） -->
+  <div id="home-progress-wrap" style="margin:0 1.5rem 1.5rem;border-radius:14px;padding:16px;border:1px solid">
+    <div id="home-progress-title" style="font-size:11px;font-weight:600;letter-spacing:0.08em;margin-bottom:12px">PROGRESS</div>
+    <div id="home-progress-bars"></div>
   </div>
-  <div id="review-btn-home" onclick="goReview(null)" style="margin:0 1.5rem 1.5rem;display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid #EF4444">
+
+  <!-- 復習ボタン -->
+  <div id="review-btn-home" onclick="goReview(null)" style="margin:0 1.5rem 1rem;display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid #EF4444">
     <span>🔁</span><span>復習リスト</span>
     <span id="review-count" style="background:#EF4444;color:#fff;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:auto">0</span>
   </div>
-  <div id="section-label" style="font-size:11px;font-weight:600;letter-spacing:0.08em;padding:0 1.5rem;margin-bottom:10px">CHAPTERS</div>
-  <div id="chapter-list"></div>
-  <div id="glossary-btn" onclick="goGlossary()" style="margin:0 1.5rem 2rem;display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid">
+
+  <!-- 索引ボタン -->
+  <div id="glossary-btn" onclick="goGlossary()" style="margin:0 1.5rem 1.5rem;display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid">
     <span>📖</span><span>化学用語索引</span><span id="glossary-count" style="font-size:12px;font-family:'JetBrains Mono',monospace;margin-left:auto"></span>
+  </div>
+
+  <!-- このアプリの目標 -->
+  <div id="home-goal-wrap" style="margin:0 1.5rem 2rem;border-radius:14px;padding:16px;border:1px solid">
+    <div id="home-goal-title" style="font-size:11px;font-weight:600;letter-spacing:0.08em;margin-bottom:10px">このアプリの目標</div>
+    <div id="home-goal-text" style="font-size:13px;line-height:1.9">本アプリはあくまでも最低限の知識を確認するためのものです。故に表や図などはありません。頭の中に入っていて、その表や図を正しく暗記できているかを確認するアプリです。初学者にはこれはかなり厳しいので、一度学校の授業などを受け終わってからこのアプリを使ってください。これら問題のどれかが抜け落ちていたら、他の受験生から点差をつけられてしまうでしょう。このアプリが手軽に知識を確認するとともに演習を円滑に進められる潤滑油になればと思います。</div>
   </div>
 </div>
 
+<!-- Chapter画面 -->
+<div id="chapter-screen" class="screen">
+  <div id="ch-screen-header" style="padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid">
+    <div id="ch-screen-title" style="font-size:18px;font-weight:700">📚 Chapters</div>
+    <button id="ch-theme-btn" onclick="toggleTheme()" style="width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;border:1px solid">🌙</button>
+  </div>
+  <div id="chapter-list" style="padding:1rem 1.5rem"></div>
+</div>
 
-<!-- 章画面 -->
-<div id="chapter-screen">
+<!-- Information画面 -->
+<div id="info-screen" class="screen">
+  <div id="info-header" style="padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid">
+    <div id="info-title" style="font-size:18px;font-weight:700">ℹ️ Information</div>
+    <button id="info-theme-btn" onclick="toggleTheme()" style="width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;border:1px solid">🌙</button>
+  </div>
+  <div style="padding:1.5rem">
+    <!-- このアプリについて -->
+    <div id="info-about-wrap" style="border-radius:14px;padding:16px;border:1px solid;margin-bottom:1rem">
+      <div id="info-about-label" style="font-size:11px;font-weight:600;letter-spacing:0.08em;margin-bottom:10px">このアプリについて</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="info-ver-label" style="font-size:14px">Version</div>
+          <div id="info-ver-val" style="font-size:14px;font-family:'JetBrains Mono',monospace;font-weight:600">1.0.0</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="info-release-label" style="font-size:14px">リリース</div>
+          <div id="info-release-val" style="font-size:14px;font-family:'JetBrains Mono',monospace;font-weight:600">2025</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="info-copy-label" style="font-size:14px">著作権</div>
+          <div id="info-copy-val" style="font-size:13px;font-weight:600">© 2025 tosasuretsu</div>
+        </div>
+      </div>
+    </div>
+    <!-- 連絡 -->
+    <div id="info-contact-wrap" style="border-radius:14px;padding:16px;border:1px solid;margin-bottom:1rem">
+      <div id="info-contact-label" style="font-size:11px;font-weight:600;letter-spacing:0.08em;margin-bottom:10px">連絡</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div id="info-contact-text" style="font-size:13px;line-height:1.8">バグの報告・ご意見・ご要望はこちらまでお気軽にどうぞ。問題の誤りや改善点があればぜひ教えてください。</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div id="info-menu-update" style="padding:12px 14px;border-radius:10px;border:1px solid;font-size:14px;cursor:pointer">🔔 アップデート情報</div>
+          <div id="info-menu-feedback" style="padding:12px 14px;border-radius:10px;border:1px solid;font-size:14px;cursor:pointer">✉️ フィードバックを送る</div>
+        </div>
+      </div>
+    </div>
+    <!-- 統計 -->
+    <div id="info-stats-wrap" style="border-radius:14px;padding:16px;border:1px solid">
+      <div id="info-stats-label" style="font-size:11px;font-weight:600;letter-spacing:0.08em;margin-bottom:12px">学習統計</div>
+      <div style="display:flex;gap:10px">
+        <div id="sc1" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-total" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">0</div><div style="font-size:11px;margin-top:2px">総回答数</div></div>
+        <div id="sc2" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-correct" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">0</div><div style="font-size:11px;margin-top:2px">正解数</div></div>
+        <div id="sc3" style="flex:1;border-radius:12px;padding:12px;text-align:center;border:1px solid"><div id="stat-acc" style="font-size:24px;font-weight:700;font-family:'JetBrains Mono',monospace">—</div><div style="font-size:11px;margin-top:2px">正答率</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 章詳細画面（ボトムナビあり） -->
+<div id="chapter-detail-screen" class="screen">
   <div id="ch-header" style="padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid">
-    <button id="ch-back" onclick="goHome()" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid;flex-shrink:0">←</button>
+    <button id="ch-back" onclick="goChapterList()" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid;flex-shrink:0">←</button>
     <div id="ch-title" style="font-size:16px;font-weight:700;flex:1"></div>
   </div>
   <div id="ch-body" style="padding:1rem 1.5rem"></div>
@@ -68,7 +169,7 @@ body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
 <!-- 復習リスト画面 -->
 <div id="review-screen">
   <div id="rh" style="padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid">
-    <button id="r-back" onclick="goHome()" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid;flex-shrink:0">←</button>
+    <button id="r-back" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid;flex-shrink:0">←</button>
     <div id="r-title" style="font-size:16px;font-weight:700;flex:1">🔁 復習リスト</div>
     <div id="r-badge" style="font-size:12px;font-family:'JetBrains Mono',monospace"></div>
   </div>
@@ -77,7 +178,6 @@ body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
 
 <!-- 索引画面 -->
 <div id="glossary-screen">
-  <!-- リスト表示 -->
   <div id="gs-list-view">
     <div id="gs-header" style="padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid">
       <button id="gs-back" onclick="goHome()" style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid;flex-shrink:0">←</button>
@@ -91,7 +191,6 @@ body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
     <div id="gs-row-index" style="display:flex;flex-wrap:wrap;gap:4px;padding:0 1rem 8px"></div>
     <div id="gs-list" style="padding:0 1rem 2rem"></div>
   </div>
-
 </div>
 
 <!-- クイズ画面 -->
@@ -111,12 +210,44 @@ body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
   </div>
 </div>
 
-<script>
-const DARK={bg:'#0F0F13',bg2:'#1E1E28',bg3:'#2A2A3A',border:'#3A3A52',text:'#F0F0F8',text2:'#A0A0BC',text3:'#6A6A88',cb:'#2C2C44',ct:'#FFFFFF',cbr:'#5A5A78',mb:'#1C1700',mt:'#FCD34D',eb:'#1A1A2E',et:'#A0A0BC'};
-const LIGHT={bg:'#F4F4FA',bg2:'#FFFFFF',bg3:'#EEEEF8',border:'#DCDCF0',text:'#111118',text2:'#555570',text3:'#AAAACC',cb:'#FFFFFF',ct:'#111118',cbr:'#AAAADD',mb:'#FFFBEB',mt:'#92400E',eb:'#F0F0FF',et:'#555570'};
-let isDark=true;
-function T(){return isDark?DARK:LIGHT;}
+<!-- ボトムナビゲーション -->
+<nav id="bottom-nav">
+  <button class="nav-tab" id="nav-home" onclick="switchTab('home')">
+    <span class="nav-icon">🏠</span>
+    <span>Home</span>
+  </button>
+  <button class="nav-tab" id="nav-chapter" onclick="switchTab('chapter')">
+    <span class="nav-icon">📚</span>
+    <span>Chapter</span>
+  </button>
+  <button class="nav-tab" id="nav-info" onclick="switchTab('info')">
+    <span class="nav-icon">ℹ️</span>
+    <span>Information</span>
+  </button>
+</nav>
 
+<script>
+const CHAPTERS=[{id:1,name:'第1章 物質の構成',color:'#7C3AED'},{id:2,name:'第2章 化学結合',color:'#0D9488'},{id:3,name:'第3章 物質の状態',color:'#EA580C'},{id:'4a',name:'第4章 物質の反応（酸塩基）',color:'#0369A1'},{id:'4b',name:'第4章 物質の反応（酸化還元）',color:'#B45309'}];
+const TOPICS=[
+  {id:1,ch:1,name:'元素記号・族・定義',icon:'⚛️',count:10},
+  {id:2,ch:1,name:'電子配置・価電子',icon:'🔵',count:10},
+  {id:3,ch:1,name:'イオン化E・電気陰性度・イオン半径',icon:'📊',count:10},
+  {id:4,ch:2,name:'結合の種類・見分け方',icon:'🔗',count:10},
+  {id:5,ch:2,name:'分子の極性・形',icon:'💧',count:11},
+  {id:6,ch:3,name:'状態変化と温度・圧力',icon:'🌡️',count:10},
+  {id:7,ch:3,name:'溶解度・コロイド',icon:'🧪',count:10},
+  {id:8,ch:'4a',name:'酸塩基・中和',icon:'⚗️',count:11},
+  {id:9,ch:'4b',name:'酸化還元・イオン化傾向',icon:'⚡',count:12},
+  {id:10,ch:'4b',name:'電池・電気分解',icon:'🔋',count:10},
+  {id:11,ch:'4a',name:'化学平衡・ルシャトリエ',icon:'⚖️',count:12},
+  {id:12,ch:'4a',name:'酸塩基の識別',icon:'🎨',count:13},
+  {id:13,ch:'4b',name:'半反応式',icon:'📝',count:14},
+  {id:14,ch:'4b',name:'電気分解の反応',icon:'⚙️',count:10},
+  {id:15,ch:'4b',name:'電池の仕組み',icon:'🔌',count:10},
+  {id:16,ch:'4a',name:'電離・加水分解',icon:'🔀',count:8},
+  {id:17,ch:2,name:'結晶構造',icon:'💎',count:10},
+  {id:18,ch:'4a',name:'溶解度積・共通イオン効果',icon:'🧂',count:8},
+];
 const GLOSSARY=[
   {term:"アボガドロ定数",read:"あぼがどろていすう",desc:`1molの粒子（原子・分子・イオンなど）の数。6.02×10²³ /mol。記号NA。`},
   {term:"アルカリ金属",read:"あるかりきんぞく",desc:`周期表1族の元素（Li, Na, K, Rb, Cs, Fr）。価電子1個で1価の陽イオンになりやすい。水と激しく反応してH₂を発生。`},
@@ -209,51 +340,6 @@ const GLOSSARY=[
   {term:"弱酸",read:"よわさん",desc:`水溶液中で一部しか電離しない酸。CH₃COOH・H₂CO₃・HF・H₂Sなど。電離定数Kaが小さい値（10⁻⁵程度）。`},
   {term:"ルシャトリエの原理",read:"るしゃとりえのげんり",desc:`平衡状態に変化（濃度・温度・圧力）を加えると、その変化を緩和する方向に平衡が移動する原理。触媒は平衡移動に影響しない。`},
   {term:"励起状態",read:"れいきじょうたい",desc:`電子が基底状態より高いエネルギー準位に遷移した状態。光のエネルギーを吸収して起こる。`}
-];
-
-let gsStarred=JSON.parse(localStorage.getItem('gs_starred')||'[]');
-let gsStarFilter=false;
-
-function toggleStar(term){
-  if(gsStarred.includes(term)){gsStarred=gsStarred.filter(s=>s!==term);}
-  else{gsStarred.push(term);}
-  localStorage.setItem('gs_starred',JSON.stringify(gsStarred));
-  applyTheme();
-  // ★フィルター中なら再描画、そうでなければ現在の検索で再描画
-  const q=document.getElementById('gs-search')?.value.trim()||'';
-  let list=GLOSSARY;
-  if(q) list=list.filter(g=>g.term.includes(q)||g.read.includes(q)||g.desc.includes(q));
-  if(gsStarFilter) list=list.filter(g=>gsStarred.includes(g.term));
-  renderGlossary(list);
-}
-
-function toggleStarFilter(){
-  gsStarFilter=!gsStarFilter;
-  applyTheme();
-  filterGlossary();
-}
-
-
-const CHAPTERS=[{id:1,name:'第1章 物質の構成',color:'#7C3AED'},{id:2,name:'第2章 化学結合',color:'#0D9488'},{id:3,name:'第3章 物質の状態',color:'#EA580C'},{id:'4a',name:'第4章 物質の反応（酸塩基）',color:'#0369A1'},{id:'4b',name:'第4章 物質の反応（酸化還元）',color:'#B45309'}];
-const TOPICS=[
-  {id:1,ch:1,name:'元素記号・族・定義',icon:'⚛️',count:10},
-  {id:2,ch:1,name:'電子配置・価電子',icon:'🔵',count:10},
-  {id:3,ch:1,name:'イオン化E・電気陰性度・イオン半径',icon:'📊',count:10},
-  {id:4,ch:2,name:'結合の種類・見分け方',icon:'🔗',count:10},
-  {id:5,ch:2,name:'分子の極性・形',icon:'💧',count:11},
-  {id:6,ch:3,name:'状態変化と温度・圧力',icon:'🌡️',count:10},
-  {id:7,ch:3,name:'溶解度・コロイド',icon:'🧪',count:10},
-  {id:8,ch:'4a',name:'酸塩基・中和',icon:'⚗️',count:11},
-  {id:9,ch:'4b',name:'酸化還元・イオン化傾向',icon:'⚡',count:12},
-  {id:10,ch:'4b',name:'電池・電気分解',icon:'🔋',count:10},
-  {id:11,ch:'4a',name:'化学平衡・ルシャトリエ',icon:'⚖️',count:12},
-  {id:12,ch:'4a',name:'酸塩基の識別',icon:'🎨',count:13},
-  {id:13,ch:'4b',name:'半反応式',icon:'📝',count:14},
-  {id:14,ch:'4b',name:'電気分解の反応',icon:'⚙️',count:10},
-  {id:15,ch:'4b',name:'電池の仕組み',icon:'🔌',count:10},
-  {id:16,ch:'4a',name:'電離・加水分解',icon:'🔀',count:8},
-  {id:17,ch:2,name:'結晶構造',icon:'💎',count:10},
-  {id:18,ch:'4a',name:'溶解度積・共通イオン効果',icon:'🧂',count:8},
 ];
 const Q=[
   // ===== 第1章 物質の構成 =====
@@ -487,6 +573,31 @@ const Q=[
   {id:1806,t:18,ch:'4a',q:"Mg(OH)₂ の溶解度積 Ksp を正しく表した式はどれか。Mg(OH)₂ ⇌ Mg²⁺ + 2OH⁻",c:["Ksp = [Mg²⁺][OH⁻]²","Ksp = [Mg²⁺]²[OH⁻]","Ksp = [Mg²⁺][OH⁻]","Ksp = [Mg²⁺]²[OH⁻]²"],a:0,e:"Mg(OH)₂ ⇌ Mg²⁺ + 2OH⁻\nKsp = [Mg²⁺][OH⁻]²\n係数がそのまま指数になる（2OH⁻ → [OH⁻]²）。\n溶解度をs mol/Lとすると：[Mg²⁺]=s、[OH⁻]=2s\nKsp = s×(2s)² = 4s³",memo:"係数→指数。1:2型のKsp=4s³は重要計算パターン。"},
   {id:1807,t:18,ch:'4a',q:"AgCl（Ksp=1×10⁻¹⁰）とAgI（Ksp=1×10⁻¹⁶）を比べたとき正しい記述はどれか。",c:["AgIのほうが水に溶けにくい","AgClのほうが水に溶けにくい","どちらも同じ溶解度","Kspだけでは比較できない"],a:0,e:"同じ式型（AgX → Ag⁺ + X⁻）の難溶性塩はKspが小さいほど溶解度が小さい（溶けにくい）。\nKsp(AgCl)=1×10⁻¹⁰ > Ksp(AgI)=1×10⁻¹⁶\n∴ AgI の方が溶解度が小さく水に溶けにくい。\n\n応用：AgCl沈殿にKIを加えるとAgIに変換される（より溶解度が小さい方が安定）",memo:"Kspが小さい→溶けにくい。AgF>AgCl>AgBr>AgIの順に溶けにくくなる。"},
   {id:1808,t:18,ch:'4a',q:"共通イオン効果を利用した実例として最も適切なものはどれか。",c:["食塩水にHClを加えてNaClを析出させる","水を加えてAgClを溶かす","加熱してCaCO₃の溶解度を上げる","電気分解でCuを析出させる"],a:0,e:"食塩（NaCl）の飽和水溶液にHCl（塩酸）を加えると\nHCl → H⁺ + Cl⁻（完全電離）でCl⁻が増加\n→ 共通イオン（Cl⁻）効果でNaClの溶解平衡が左に移動\n→ NaClが析出する\n\nこれはソルベー法（アンモニアソーダ法）でNaHCO₃を析出させる際にも応用される。",memo:"HCl吹き込み→Cl⁻増加→NaCl析出。ソルベー法の原理。"},];
+const DARK={bg:'#0F0F13',bg2:'#1E1E28',bg3:'#2A2A3A',border:'#3A3A52',text:'#F0F0F8',text2:'#A0A0BC',text3:'#6A6A88',cb:'#2C2C44',ct:'#FFFFFF',cbr:'#5A5A78',mb:'#1C1700',mt:'#FCD34D',eb:'#1A1A2E',et:'#A0A0BC',nav:'#1E1E28',navBorder:'#3A3A52',navActive:'#7C3AED',navInactive:'#6A6A88'};
+const LIGHT={bg:'#F4F4FA',bg2:'#FFFFFF',bg3:'#EEEEF8',border:'#DCDCF0',text:'#111118',text2:'#555570',text3:'#AAAACC',cb:'#FFFFFF',ct:'#111118',cbr:'#AAAADD',mb:'#FFFBEB',mt:'#92400E',eb:'#F0F0FF',et:'#555570',nav:'#FFFFFF',navBorder:'#DCDCF0',navActive:'#7C3AED',navInactive:'#AAAACC'};
+let isDark=true;
+function T(){return isDark?DARK:LIGHT;}
+
+let gsStarred=JSON.parse(localStorage.getItem('gs_starred')||'[]');
+let gsStarFilter=false;
+let currentTab='home';
+
+function toggleStar(term){
+  if(gsStarred.includes(term)){gsStarred=gsStarred.filter(s=>s!==term);}
+  else{gsStarred.push(term);}
+  localStorage.setItem('gs_starred',JSON.stringify(gsStarred));
+  const q=document.getElementById('gs-search')?.value.trim()||'';
+  let list=GLOSSARY;
+  if(q) list=list.filter(g=>g.term.includes(q)||g.read.includes(q)||g.desc.includes(q));
+  if(gsStarFilter) list=list.filter(g=>gsStarred.includes(g.term));
+  renderGlossary(list);
+}
+
+function toggleStarFilter(){
+  gsStarFilter=!gsStarFilter;
+  applyTheme();
+  filterGlossary();
+}
 
 let reviewList=[];
 let curQ=[],curIdx=0,curAnswered=false,curScore=0,curMissed=[],curHistory=[];
@@ -502,35 +613,126 @@ const remRL=id=>{reviewList=reviewList.filter(i=>i!==id);saveRL();};
 const getStats=()=>JSON.parse(localStorage.getItem('gs')||'{"t":0,"c":0}');
 const addStats=(t,c)=>{const s=getStats();s.t+=t;s.c+=c;localStorage.setItem('gs',JSON.stringify(s));};
 
-function show(id){['home','chapter-screen','review-screen','glossary-screen','quiz-screen'].forEach(s=>document.getElementById(s).style.display=s===id?'block':'none');}
+const QUIZ_SCREENS=['quiz-screen','review-screen','glossary-screen'];
+const MAIN_SCREENS=['home-screen','chapter-screen','chapter-detail-screen','info-screen'];
+
+function showScreen(id){
+  const allScreens=[...MAIN_SCREENS,...QUIZ_SCREENS];
+  allScreens.forEach(s=>{
+    const el=document.getElementById(s);
+    if(el){
+      el.style.display='none';
+      el.classList.remove('active');
+    }
+  });
+  const target=document.getElementById(id);
+  if(target){
+    target.style.display='block';
+    target.classList.add('active');
+  }
+  // ボトムナビの表示/非表示
+  const isQuiz=QUIZ_SCREENS.includes(id);
+  document.getElementById('bottom-nav').style.display=isQuiz?'none':'flex';
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  updateNavHighlight();
+  if(tab==='home'){
+    showScreen('home-screen');
+    buildHome();
+  } else if(tab==='chapter'){
+    showScreen('chapter-screen');
+    buildChapterList();
+  } else if(tab==='info'){
+    showScreen('info-screen');
+    buildInfo();
+  }
+}
+
+function updateNavHighlight(){
+  const t=T();
+  ['home','chapter','info'].forEach(tab=>{
+    const el=document.getElementById('nav-'+tab);
+    if(!el) return;
+    const isActive=tab===currentTab;
+    el.style.color=isActive?t.navActive:t.navInactive;
+  });
+}
 
 function applyTheme(){
   const t=T();
   document.body.style.background=t.bg;
   document.body.style.color=t.text;
+
+  // ボトムナビ
+  const nav=document.getElementById('bottom-nav');
+  if(nav){nav.style.background=t.nav;nav.style.borderColor=t.navBorder;}
+  updateNavHighlight();
+
+  // ホーム
   const set=(id,styles)=>{const el=document.getElementById(id);if(el)Object.assign(el.style,styles);};
   set('app-title',{color:t.text});
   set('app-sub',{color:t.text2});
   set('theme-btn',{background:t.bg2,borderColor:t.border,color:t.text});
-  document.getElementById('theme-btn').textContent=isDark?'🌙':'☀️';
-  ['sc1','sc2','sc3'].forEach(id=>set(id,{background:t.bg2,borderColor:t.border,color:t.text}));
+  const themeBtns=document.querySelectorAll('#theme-btn,#ch-theme-btn,#info-theme-btn');
+  themeBtns.forEach(btn=>{btn.style.background=t.bg2;btn.style.borderColor=t.border;btn.style.color=t.text;btn.textContent=isDark?'🌙':'☀️';});
+
+  set('home-progress-wrap',{background:t.bg2,borderColor:t.border});
+  set('home-progress-title',{color:t.text3});
+  set('home-goal-wrap',{background:t.bg2,borderColor:t.border});
+  set('home-goal-title',{color:t.text3});
+  set('home-goal-text',{color:t.text2});
   set('review-btn-home',{background:t.bg2,color:'#EF4444'});
-  set('section-label',{color:t.text3});
   set('glossary-btn',{background:t.bg2,borderColor:t.border,color:t.text});
   set('glossary-count',{color:t.text3});
+
+  // Chapter画面
+  set('ch-screen-header',{borderColor:t.border,background:t.bg});
+  set('ch-screen-title',{color:t.text});
+
+  // Information画面
+  set('info-header',{borderColor:t.border,background:t.bg});
+  set('info-title',{color:t.text});
+  set('info-about-wrap',{background:t.bg2,borderColor:t.border});
+  set('info-about-label',{color:t.text3});
+  set('info-ver-label',{color:t.text2});set('info-ver-val',{color:t.text});
+  set('info-release-label',{color:t.text2});set('info-release-val',{color:t.text});
+  set('info-copy-label',{color:t.text2});set('info-copy-val',{color:t.text});
+  set('info-contact-wrap',{background:t.bg2,borderColor:t.border});
+  set('info-contact-label',{color:t.text3});
+  set('info-contact-text',{color:t.text2});
+  set('info-menu-update',{background:t.bg3,borderColor:t.border,color:t.text});
+  set('info-menu-feedback',{background:t.bg3,borderColor:t.border,color:t.text});
+  set('info-stats-wrap',{background:t.bg2,borderColor:t.border});
+  set('info-stats-label',{color:t.text3});
+  ['sc1','sc2','sc3'].forEach(id=>set(id,{background:t.bg3,borderColor:t.border,color:t.text}));
+
+  // 章詳細
+  set('ch-header',{borderColor:t.border,background:t.bg});
+  set('ch-back',{background:t.bg2,borderColor:t.border,color:t.text2});
+  set('ch-title',{color:t.text});
+  set('ch-body',{background:t.bg});
+
+  // 復習
+  set('rh',{borderColor:t.border,background:t.bg});
+  set('r-back',{background:t.bg2,borderColor:t.border,color:t.text2});
+  set('r-title',{color:t.text});
+  set('r-badge',{color:t.text2});
+
+  // 索引
   set('gs-header',{borderColor:t.border,background:t.bg});
   set('gs-back',{background:t.bg2,borderColor:t.border,color:t.text2});
   set('gs-title',{color:t.text});
   set('gs-count',{color:t.text2});
   set('gs-search-wrap',{background:t.bg});
-  const sfBtn=document.getElementById('gs-star-filter');if(sfBtn){const sf=gsStarFilter;sfBtn.style.background=sf?'#F59E0B':t.bg2;sfBtn.style.color=sf?'#fff':t.text2;sfBtn.style.borderColor=sf?'#F59E0B':t.border;sfBtn.textContent=sf?'★のみ':'☆のみ';}
-  set('rh',{borderColor:t.border,background:t.bg});
-  set('r-back',{background:t.bg2,borderColor:t.border,color:t.text2});
-  set('r-title',{color:t.text});
-  set('r-badge',{color:t.text2});
+  const sfBtn=document.getElementById('gs-star-filter');
+  if(sfBtn){const sf=gsStarFilter;sfBtn.style.background=sf?'#F59E0B':t.bg2;sfBtn.style.color=sf?'#fff':t.text2;sfBtn.style.borderColor=sf?'#F59E0B':t.border;sfBtn.textContent=sf?'★のみ':'☆のみ';}
+  const searchEl=document.getElementById('gs-search');
+  if(searchEl){searchEl.style.cssText=`width:100%;padding:10px 14px;border-radius:10px;border:1px solid ${t.border};font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;background:${t.bg2};color:${t.text}`;}
 }
 
-function toggleTheme(){isDark=!isDark;localStorage.setItem('th',isDark?'d':'l');applyTheme();buildHome();}
+function toggleTheme(){isDark=!isDark;localStorage.setItem('th',isDark?'d':'l');applyTheme();buildHome();buildChapterList();}
 function initTheme(){const s=localStorage.getItem('th');isDark=s?s==='d':true;}
 
 function updateStats(){
@@ -541,24 +743,59 @@ function updateStats(){
 }
 
 function buildHome(){
-  applyTheme();updateStats();
-  const gcEl=document.getElementById('glossary-count');if(gcEl)gcEl.textContent=GLOSSARY.length+'語';
+  applyTheme();
+  loadRL();
   document.getElementById('review-count').textContent=reviewList.length;
+  const gcEl=document.getElementById('glossary-count');if(gcEl)gcEl.textContent=GLOSSARY.length+'語';
+  const t=T();
+
+  // 帯グラフ
+  const barsEl=document.getElementById('home-progress-bars');
+  barsEl.innerHTML='';
+  CHAPTERS.forEach(ch=>{
+    const topics=TOPICS.filter(tp=>tp.ch===ch.id);
+    const attempted=topics.filter(tp=>getAcc(tp.id)!==null).length;
+    const pct=topics.length>0?Math.round(attempted/topics.length*100):0;
+
+    const row=document.createElement('div');
+    row.style.cssText=`display:flex;align-items:center;gap:10px;margin-bottom:10px`;
+
+    const label=document.createElement('div');
+    label.style.cssText=`font-size:11px;font-weight:600;color:${t.text2};width:80px;flex-shrink:0;line-height:1.3`;
+    label.textContent=ch.name.replace('第','').replace('章 ','章\n');
+
+    const barWrap=document.createElement('div');
+    barWrap.style.cssText=`flex:1;height:10px;border-radius:5px;background:${t.border};overflow:hidden`;
+    const barFill=document.createElement('div');
+    barFill.style.cssText=`height:10px;border-radius:5px;background:${ch.color};width:0;transition:width 0.5s`;
+    barWrap.appendChild(barFill);
+
+    const pctLabel=document.createElement('div');
+    pctLabel.style.cssText=`font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${ch.color};width:32px;text-align:right;flex-shrink:0`;
+    pctLabel.textContent=pct+'%';
+
+    row.appendChild(label);
+    row.appendChild(barWrap);
+    row.appendChild(pctLabel);
+    barsEl.appendChild(row);
+    setTimeout(()=>{barFill.style.width=pct+'%';},50);
+  });
+}
+
+function buildChapterList(){
+  applyTheme();
   const t=T();
   const list=document.getElementById('chapter-list');
   list.innerHTML='';
   CHAPTERS.forEach(ch=>{
     const topics=TOPICS.filter(tp=>tp.ch===ch.id);
-    // 進捗計算（挑戦済みトピック数 / 全トピック数）
     const attempted=topics.filter(tp=>getAcc(tp.id)!==null).length;
     const pct=topics.length>0?Math.round(attempted/topics.length*100):0;
     const card=document.createElement('div');
-    card.style.cssText=`margin:0 1.5rem 20px;border-radius:14px;overflow:hidden;border:2px solid ${ch.color};cursor:pointer`;
-    // カードヘッダー
+    card.style.cssText=`margin-bottom:16px;border-radius:14px;overflow:hidden;border:2px solid ${ch.color};cursor:pointer`;
     const hdr=document.createElement('div');
     hdr.style.cssText=`padding:14px 16px;display:flex;align-items:center;gap:12px;background:${t.bg2};border-left:4px solid ${ch.color}`;
     hdr.innerHTML=`<div style="width:10px;height:10px;border-radius:50%;background:${ch.color};flex-shrink:0"></div><div style="font-size:15px;font-weight:600;flex:1;color:${t.text}">${ch.name}</div><div style="font-size:12px;color:${t.text2};font-family:'JetBrains Mono',monospace">${topics.length}トピック</div><div style="font-size:12px;font-weight:700;color:${ch.color};font-family:'JetBrains Mono',monospace;margin-left:8px">${pct}%</div><div style="color:${t.text3};font-size:16px;margin-left:4px">›</div>`;
-    // 細いプログレスバー
     const pbWrap=document.createElement('div');
     pbWrap.style.cssText=`height:3px;background:${t.border}`;
     const pbFill=document.createElement('div');
@@ -571,33 +808,38 @@ function buildHome(){
   });
 }
 
+function buildInfo(){
+  applyTheme();
+  updateStats();
+}
+
+function goHome(){
+  switchTab('home');
+}
+
+function goChapterList(){
+  showScreen('chapter-screen');
+  buildChapterList();
+}
+
 function goChapter(ch){
   const t=T();
-  show('chapter-screen');
-  // ヘッダー
-  const header=document.getElementById('ch-header');
-  header.style.cssText=`padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid ${t.border};background:${t.bg}`;
-  const chBack=document.getElementById('ch-back');
-  chBack.style.cssText=`width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid ${t.border};background:${t.bg2};color:${t.text2};flex-shrink:0`;
+  showScreen('chapter-detail-screen');
+  document.getElementById('ch-header').style.cssText=`padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid ${t.border};background:${t.bg}`;
+  document.getElementById('ch-back').style.cssText=`width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid ${t.border};background:${t.bg2};color:${t.text2};flex-shrink:0`;
   const chTitle=document.getElementById('ch-title');
-  chTitle.textContent=ch.name;
-  chTitle.style.color=t.text;
+  chTitle.textContent=ch.name;chTitle.style.color=t.text;
   const body=document.getElementById('ch-body');
-  body.innerHTML='';
-  body.style.background=t.bg;
+  body.innerHTML='';body.style.background=t.bg;
 
   const topics=TOPICS.filter(tp=>tp.ch===ch.id);
-  // 進捗計算
   const attempted=topics.filter(tp=>getAcc(tp.id)!==null).length;
   const pct=topics.length>0?Math.round(attempted/topics.length*100):0;
-  // 平均正答率
   const accs=topics.map(tp=>getAcc(tp.id)).filter(a=>a!==null);
   const avgAcc=accs.length>0?Math.round(accs.reduce((s,a)=>s+a,0)/accs.length):null;
 
-  // --- 進捗カード ---
   const progCard=document.createElement('div');
   progCard.style.cssText=`border-radius:14px;padding:16px;background:${t.bg2};border:1px solid ${t.border};margin-bottom:12px`;
-  // %テキスト
   const progTop=document.createElement('div');
   progTop.style.cssText=`display:flex;align-items:flex-end;gap:8px;margin-bottom:10px`;
   const progNum=document.createElement('div');
@@ -610,25 +852,17 @@ function goChapter(ch){
     const avgEl=document.createElement('div');
     avgEl.style.cssText=`font-size:13px;font-weight:700;color:${avgAcc>=80?'#10B981':avgAcc>=50?'#F59E0B':'#EF4444'};padding-bottom:6px;margin-left:auto`;
     avgEl.textContent='平均 '+avgAcc+'%';
-    progTop.appendChild(progNum);
-    progTop.appendChild(progSub);
-    progTop.appendChild(avgEl);
-  } else {
-    progTop.appendChild(progNum);
-    progTop.appendChild(progSub);
-  }
-  // プログレスバー
+    progTop.appendChild(progNum);progTop.appendChild(progSub);progTop.appendChild(avgEl);
+  } else {progTop.appendChild(progNum);progTop.appendChild(progSub);}
   const pbWrap=document.createElement('div');
   pbWrap.style.cssText=`height:8px;border-radius:4px;background:${t.border};overflow:hidden`;
   const pbFill=document.createElement('div');
   pbFill.style.cssText=`height:8px;border-radius:4px;background:${ch.color};width:0;transition:width 0.5s`;
   pbWrap.appendChild(pbFill);
-  progCard.appendChild(progTop);
-  progCard.appendChild(pbWrap);
+  progCard.appendChild(progTop);progCard.appendChild(pbWrap);
   body.appendChild(progCard);
-  setTimeout(()=>{ pbFill.style.width=pct+'%'; }, 50);
+  setTimeout(()=>{pbFill.style.width=pct+'%';},50);
 
-  // --- 章の復習リストボタン ---
   const rlQsInCh=Q.filter(q=>q.ch===ch.id && reviewList.includes(q.id));
   const rlBtn=document.createElement('div');
   rlBtn.style.cssText=`display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;border:1px solid #EF4444;background:${t.bg2};margin-bottom:16px`;
@@ -636,24 +870,20 @@ function goChapter(ch){
   rlBtn.onclick=()=>goReview(ch.id);
   body.appendChild(rlBtn);
 
-  // --- セクションラベル ---
   const secLabel=document.createElement('div');
   secLabel.style.cssText=`font-size:11px;font-weight:600;letter-spacing:0.08em;color:${t.text3};margin-bottom:8px`;
   secLabel.textContent='TOPICS';
   body.appendChild(secLabel);
 
-  // --- トピックリスト ---
   topics.forEach(tp=>{
     const acc=getAcc(tp.id);
     const ac=acc===null?t.text3:acc>=80?'#10B981':acc>=50?'#F59E0B':'#EF4444';
     const at=acc===null?'未挑戦':acc+'%';
     const row=document.createElement('div');
     row.style.cssText=`display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;background:${t.bg2};border:1px solid ${t.border};margin-bottom:8px;cursor:pointer`;
-    // アイコン
     const icon=document.createElement('div');
     icon.style.cssText=`width:40px;height:40px;border-radius:10px;background:${ch.color}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0`;
     icon.textContent=tp.icon;
-    // テキスト群
     const info=document.createElement('div');
     info.style.cssText=`flex:1;min-width:0`;
     const name=document.createElement('div');
@@ -662,13 +892,10 @@ function goChapter(ch){
     const meta=document.createElement('div');
     meta.style.cssText=`font-size:11px;color:${t.text3};margin-top:2px;font-family:'JetBrains Mono',monospace`;
     meta.textContent=tp.count+'問';
-    info.appendChild(name);
-    info.appendChild(meta);
-    // 正答率バッジ
+    info.appendChild(name);info.appendChild(meta);
     const badge=document.createElement('div');
     badge.style.cssText=`font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${ac};flex-shrink:0`;
     badge.textContent=at;
-    // ミニ正答率バー
     const miniBar=document.createElement('div');
     if(acc!==null){
       miniBar.style.cssText=`width:40px;height:4px;border-radius:2px;background:${t.border};overflow:hidden;flex-shrink:0`;
@@ -679,164 +906,84 @@ function goChapter(ch){
     const chevron=document.createElement('div');
     chevron.style.cssText=`color:${t.text3};font-size:16px;flex-shrink:0`;
     chevron.textContent='›';
-    row.appendChild(icon);
-    row.appendChild(info);
+    row.appendChild(icon);row.appendChild(info);
     if(acc!==null) row.appendChild(miniBar);
-    row.appendChild(badge);
-    row.appendChild(chevron);
-    row.onclick=()=>{fromScreen='home';startTopic(tp.id,ch.color,tp.name);};
+    row.appendChild(badge);row.appendChild(chevron);
+    row.onclick=()=>{fromScreen='chapter';startTopic(tp.id,ch.color,tp.name);};
     body.appendChild(row);
   });
+  // 最後のpadding
+  const pad=document.createElement('div');pad.style.height='20px';body.appendChild(pad);
 }
 
 function goReview(filterChId){
-  show('review-screen');
+  showScreen('review-screen');
   const t=T();
   document.getElementById('rh').style.cssText=`padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid ${t.border};background:${t.bg}`;
-  // 戻るボタン：章からなら章画面に戻る、それ以外はホーム
   const rBack=document.getElementById('r-back');
   rBack.style.cssText=`width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid ${t.border};flex-shrink:0;background:${t.bg2};color:${t.text2}`;
   const originCh=filterChId!=null?CHAPTERS.find(c=>c.id===filterChId):null;
   rBack.onclick=()=>originCh?goChapter(originCh):goHome();
   document.getElementById('r-title').textContent=originCh?`🔁 復習リスト（${originCh.name}）`:'🔁 復習リスト';
   document.getElementById('r-title').style.color=t.text;
-  // フィルタ済みの復習リスト
-  const filteredRL=filterChId!=null
-    ?Q.filter(q=>q.ch===filterChId && reviewList.includes(q.id)).map(q=>q.id)
-    :reviewList;
+  const filteredRL=filterChId!=null?Q.filter(q=>q.ch===filterChId && reviewList.includes(q.id)).map(q=>q.id):reviewList;
   document.getElementById('r-badge').textContent=`合計 ${filteredRL.length} 問`;
   document.getElementById('r-badge').style.color=t.text2;
   const body=document.getElementById('review-list-body');
   body.innerHTML='';
-
   if(filteredRL.length===0){
     const empty=document.createElement('div');
     empty.style.cssText=`text-align:center;padding:3rem 1.5rem;color:${t.text2};font-size:14px`;
     empty.innerHTML=`復習リストは空です 🎉<br><span style="font-size:12px;color:${t.text3}">間違えた問題が自動で追加されます</span>`;
-    body.appendChild(empty);
-    return;
+    body.appendChild(empty);return;
   }
-
-  // 章ループ（filterChIdがあればその章だけ）
   const visibleChapters=filterChId!=null?CHAPTERS.filter(c=>c.id===filterChId):CHAPTERS;
   visibleChapters.forEach(ch=>{
-    // この章に復習問題があるトピックを集める
     const topicsInCh=TOPICS.filter(tp=>tp.ch===ch.id);
     const rlQsInCh=Q.filter(q=>q.ch===ch.id && filteredRL.includes(q.id));
     if(rlQsInCh.length===0) return;
-
-    // 章カード
     const chCard=document.createElement('div');
     chCard.style.cssText=`margin:0 1rem 12px;border-radius:14px;overflow:hidden;border:2px solid ${ch.color}`;
-
-    // 章ヘッダー（クリックで章全体を開閉）
     const chHdr=document.createElement('div');
     chHdr.style.cssText=`padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:${t.bg2};border-left:4px solid ${ch.color}`;
-    const chDot=document.createElement('div');
-    chDot.style.cssText=`width:10px;height:10px;border-radius:50%;background:${ch.color};flex-shrink:0`;
-    const chName=document.createElement('div');
-    chName.style.cssText=`font-size:14px;font-weight:600;flex:1;color:${t.text}`;
-    chName.textContent=ch.name;
-    const chBadge=document.createElement('div');
-    chBadge.style.cssText=`font-size:11px;font-weight:700;background:${ch.color};color:#fff;border-radius:20px;padding:2px 8px`;
-    chBadge.textContent=rlQsInCh.length+'問';
-    const chChev=document.createElement('div');
-    chChev.className='topic-chevron open';
-    chChev.style.color=t.text3;
-    chChev.textContent='›';
-    chHdr.appendChild(chDot);
-    chHdr.appendChild(chName);
-    chHdr.appendChild(chBadge);
-    chHdr.appendChild(chChev);
-
-    const chBody=document.createElement('div');
-    chBody.className='sub-list open';
-    chBody.style.cssText=`background:${t.bg3};border-top:1px solid ${t.border}`;
-
+    const chDot=document.createElement('div');chDot.style.cssText=`width:10px;height:10px;border-radius:50%;background:${ch.color};flex-shrink:0`;
+    const chName=document.createElement('div');chName.style.cssText=`font-size:14px;font-weight:600;flex:1;color:${t.text}`;chName.textContent=ch.name;
+    const chBadge=document.createElement('div');chBadge.style.cssText=`font-size:11px;font-weight:700;background:${ch.color};color:#fff;border-radius:20px;padding:2px 8px`;chBadge.textContent=rlQsInCh.length+'問';
+    const chChev=document.createElement('div');chChev.className='topic-chevron open';chChev.style.color=t.text3;chChev.textContent='›';
+    chHdr.appendChild(chDot);chHdr.appendChild(chName);chHdr.appendChild(chBadge);chHdr.appendChild(chChev);
+    const chBody=document.createElement('div');chBody.className='sub-list open';chBody.style.cssText=`background:${t.bg3};border-top:1px solid ${t.border}`;
     chHdr.onclick=()=>{chBody.classList.toggle('open');chChev.classList.toggle('open');};
-
-    // トピックループ
     topicsInCh.forEach(tp=>{
       const rlQsInTp=Q.filter(q=>q.t===tp.id && filteredRL.includes(q.id));
       if(rlQsInTp.length===0) return;
-
-      // トピックヘッダー
-      const tpWrap=document.createElement('div');
-      tpWrap.style.cssText=`border-bottom:1px solid ${t.border}`;
-
-      const tpHdr=document.createElement('div');
-      tpHdr.style.cssText=`padding:10px 14px 10px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;background:${t.bg2}`;
-      const tpIcon=document.createElement('div');
-      tpIcon.style.cssText=`width:28px;height:28px;border-radius:7px;background:${ch.color}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0`;
-      tpIcon.textContent=tp.icon;
-      const tpName=document.createElement('div');
-      tpName.style.cssText=`font-size:13px;font-weight:600;flex:1;color:${t.text}`;
-      tpName.textContent=tp.name;
-      const tpCount=document.createElement('div');
-      tpCount.style.cssText=`font-size:11px;font-weight:700;color:${ch.color};font-family:'JetBrains Mono',monospace`;
-      tpCount.textContent=rlQsInTp.length+'問';
-      // ミニ開始ボタン
-      const tpBtn=document.createElement('button');
-      tpBtn.textContent='開始';
-      tpBtn.style.cssText=`padding:5px 12px;border-radius:7px;border:none;background:${ch.color};color:#fff;cursor:pointer;font-size:11px;font-weight:700;font-family:'Noto Sans JP',sans-serif;flex-shrink:0`;
+      const tpWrap=document.createElement('div');tpWrap.style.cssText=`border-bottom:1px solid ${t.border}`;
+      const tpHdr=document.createElement('div');tpHdr.style.cssText=`padding:10px 14px 10px 20px;display:flex;align-items:center;gap:10px;cursor:pointer;background:${t.bg2}`;
+      const tpIcon=document.createElement('div');tpIcon.style.cssText=`width:28px;height:28px;border-radius:7px;background:${ch.color}22;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0`;tpIcon.textContent=tp.icon;
+      const tpName=document.createElement('div');tpName.style.cssText=`font-size:13px;font-weight:600;flex:1;color:${t.text}`;tpName.textContent=tp.name;
+      const tpCount=document.createElement('div');tpCount.style.cssText=`font-size:11px;font-weight:700;color:${ch.color};font-family:'JetBrains Mono',monospace`;tpCount.textContent=rlQsInTp.length+'問';
+      const tpBtn=document.createElement('button');tpBtn.textContent='開始';tpBtn.style.cssText=`padding:5px 12px;border-radius:7px;border:none;background:${ch.color};color:#fff;cursor:pointer;font-size:11px;font-weight:700;font-family:'Noto Sans JP',sans-serif;flex-shrink:0`;
       tpBtn.onclick=(e)=>{e.stopPropagation();fromScreen='review';startQuiz(rlQsInTp.map(q=>({...q})));};
-
-      const tpChev=document.createElement('div');
-      tpChev.className='topic-chevron';
-      tpChev.style.cssText=`color:${t.text3};margin-left:4px`;
-      tpChev.textContent='›';
-
-      tpHdr.appendChild(tpIcon);
-      tpHdr.appendChild(tpName);
-      tpHdr.appendChild(tpCount);
-      tpHdr.appendChild(tpBtn);
-      tpHdr.appendChild(tpChev);
-
-      // 問題リスト
-      const tpSub=document.createElement('div');
-      tpSub.className='sub-list';
-      tpSub.style.cssText=`background:${t.bg};border-top:1px solid ${t.border}`;
-
+      const tpChev=document.createElement('div');tpChev.className='topic-chevron';tpChev.style.cssText=`color:${t.text3};margin-left:4px`;tpChev.textContent='›';
+      tpHdr.appendChild(tpIcon);tpHdr.appendChild(tpName);tpHdr.appendChild(tpCount);tpHdr.appendChild(tpBtn);tpHdr.appendChild(tpChev);
+      const tpSub=document.createElement('div');tpSub.className='sub-list';tpSub.style.cssText=`background:${t.bg};border-top:1px solid ${t.border}`;
       tpHdr.onclick=()=>{tpSub.classList.toggle('open');tpChev.classList.toggle('open');};
-
       rlQsInTp.forEach((q,qi)=>{
-        const qRow=document.createElement('div');
-        qRow.style.cssText=`display:flex;align-items:flex-start;gap:10px;padding:10px 14px 10px 32px;border-bottom:1px solid ${t.border}`;
-        const qNum=document.createElement('div');
-        qNum.style.cssText=`font-size:10px;font-weight:700;color:${ch.color};font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px`;
-        qNum.textContent='Q'+(qi+1);
-        const qText=document.createElement('div');
-        qText.style.cssText=`font-size:12px;color:${t.text};flex:1;line-height:1.6`;
-        qText.textContent=q.q;
-        const delBtn=document.createElement('button');
-        delBtn.textContent='✕';
-        delBtn.title='復習リストから削除';
-        delBtn.style.cssText=`padding:2px 6px;border-radius:5px;border:1px solid ${t.border};background:${t.bg2};color:${t.text3};cursor:pointer;font-size:11px;flex-shrink:0`;
-        delBtn.onclick=(e)=>{e.stopPropagation();remRL(q.id);goReview();};
-        qRow.appendChild(qNum);
-        qRow.appendChild(qText);
-        qRow.appendChild(delBtn);
-        tpSub.appendChild(qRow);
+        const qRow=document.createElement('div');qRow.style.cssText=`display:flex;align-items:flex-start;gap:10px;padding:10px 14px 10px 32px;border-bottom:1px solid ${t.border}`;
+        const qNum=document.createElement('div');qNum.style.cssText=`font-size:10px;font-weight:700;color:${ch.color};font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px`;qNum.textContent='Q'+(qi+1);
+        const qText=document.createElement('div');qText.style.cssText=`font-size:12px;color:${t.text};flex:1;line-height:1.6`;qText.textContent=q.q;
+        const delBtn=document.createElement('button');delBtn.textContent='✕';delBtn.title='復習リストから削除';delBtn.style.cssText=`padding:2px 6px;border-radius:5px;border:1px solid ${t.border};background:${t.bg2};color:${t.text3};cursor:pointer;font-size:11px;flex-shrink:0`;
+        delBtn.onclick=(e)=>{e.stopPropagation();remRL(q.id);goReview(filterChId);};
+        qRow.appendChild(qNum);qRow.appendChild(qText);qRow.appendChild(delBtn);tpSub.appendChild(qRow);
       });
-
-      tpWrap.appendChild(tpHdr);
-      tpWrap.appendChild(tpSub);
-      chBody.appendChild(tpWrap);
+      tpWrap.appendChild(tpHdr);tpWrap.appendChild(tpSub);chBody.appendChild(tpWrap);
     });
-
-    // 章全体を一括開始するボタン（最下部）
-    const chStartRow=document.createElement('div');
-    chStartRow.style.cssText=`padding:10px 14px;background:${t.bg3}`;
+    const chStartRow=document.createElement('div');chStartRow.style.cssText=`padding:10px 14px;background:${t.bg3}`;
     const chStartBtn=document.createElement('button');
     chStartBtn.textContent=`${filterChId!=null?'この章':ch.name}の復習問題を全て開始（${rlQsInCh.length}問）`;
     chStartBtn.style.cssText=`width:100%;padding:10px;border-radius:10px;border:2px solid ${ch.color};background:${t.bg2};color:${ch.color};cursor:pointer;font-size:13px;font-weight:700;font-family:'Noto Sans JP',sans-serif`;
     chStartBtn.onclick=()=>{fromScreen='review';startQuiz(rlQsInCh.map(q=>({...q})));};
-    chStartRow.appendChild(chStartBtn);
-    chBody.appendChild(chStartRow);
-
-    chCard.appendChild(chHdr);
-    chCard.appendChild(chBody);
-    body.appendChild(chCard);
+    chStartRow.appendChild(chStartBtn);chBody.appendChild(chStartRow);
+    chCard.appendChild(chHdr);chCard.appendChild(chBody);body.appendChild(chCard);
   });
 }
 
@@ -862,10 +1009,11 @@ function resetQuizScreenHTML(){
       <div class="nav-row"><button class="prev-btn" id="prev-btn" onclick="prevQ()"></button><button class="next-btn" id="next-btn" onclick="nextQ()"></button></div>
     </div>`;
 }
+
 function startQuiz(qs){
   curQ=qs;curIdx=0;curAnswered=false;curScore=0;curMissed=[];curHistory=[];
   resetQuizScreenHTML();
-  show('quiz-screen');
+  showScreen('quiz-screen');
   const t=T();
   document.getElementById('qh').style.cssText=`padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid ${t.border};background:${t.bg}`;
   const qb=document.getElementById('q-back');
@@ -879,7 +1027,8 @@ function startQuiz(qs){
 
 function backFromQuiz(){
   if(fromScreen==='review'){goReview();}
-  else{show('home');loadRL();buildHome();}
+  else if(fromScreen==='chapter'){goChapterList();}
+  else{goHome();}
 }
 
 function renderQ(){
@@ -896,23 +1045,15 @@ function renderQ(){
   document.getElementById('q-num').style.color=t.text3;
   document.getElementById('q-text').textContent=q.q;
   document.getElementById('q-text').style.color=t.text;
-  // 前へボタン
   const pb=document.getElementById('prev-btn');
-  if(curIdx>0){
-    pb.style.display='inline-block';
-    pb.textContent='← 前の問題';
-    pb.style.background=t.bg2;pb.style.color=t.text2;pb.style.border=`2px solid ${t.border}`;
-  } else {
-    pb.style.display='none';
-  }
+  if(curIdx>0){pb.style.display='inline-block';pb.textContent='← 前の問題';pb.style.background=t.bg2;pb.style.color=t.text2;pb.style.border=`2px solid ${t.border}`;}
+  else{pb.style.display='none';}
   const nb=document.getElementById('next-btn');
   nb.style.display='none';
   const hist=curHistory[curIdx];
   if(hist){
-    // 回答済み：色・解説を復元
     curAnswered=true;
-    const el=document.getElementById('choices');
-    el.innerHTML='';
+    const el=document.getElementById('choices');el.innerHTML='';
     q.c.forEach((text,i)=>{
       const btn=document.createElement('button');
       btn.textContent=text;btn.className='choice-btn';btn.disabled=true;
@@ -923,14 +1064,11 @@ function renderQ(){
     });
     const memo=q.memo?`<div class="memo-box" style="background:${t.mb};color:${t.mt}">💡 ${q.memo.replace(/\n/g,'<br>')}</div>`:'';
     document.getElementById('exp-area').innerHTML=`<div class="exp-box" style="background:${t.eb};color:${t.et};border-left-color:${curAccent}">${q.e.replace(/\n/g,'<br>')}</div>${memo}`;
-    nb.style.display='inline-block';
-    nb.textContent=curIdx+1<total?'次の問題 →':'結果を見る';
+    nb.style.display='inline-block';nb.textContent=curIdx+1<total?'次の問題 →':'結果を見る';
   } else {
-    // 未回答
     curAnswered=false;
     document.getElementById('exp-area').innerHTML='';
-    const el=document.getElementById('choices');
-    el.innerHTML='';
+    const el=document.getElementById('choices');el.innerHTML='';
     q.c.forEach((text,i)=>{
       const btn=document.createElement('button');
       btn.textContent=text;btn.className='choice-btn';
@@ -945,7 +1083,6 @@ function answer(chosen){
   if(curAnswered)return;curAnswered=true;
   const q=curQ[curIdx];
   const correct=(chosen===q.a);
-  // historyに保存（初回のみスコア・missedに反映）
   if(!curHistory[curIdx]){
     curHistory[curIdx]={chosen,correct};
     if(correct){curScore++;remRL(q.id);}
@@ -989,17 +1126,15 @@ function showResult(){
       ${missHtml}
       <div class="result-actions">
         <button class="result-btn" style="background:${curAccent};color:#fff" onclick="retryQuiz()">もう一度挑戦する</button>
-        <button class="result-btn" style="background:${t.bg2};border:2px solid ${t.border};color:${t.text}" onclick="backFromQuiz()">${fromScreen==='review'?'復習リストに戻る':'ホームに戻る'}</button>
+        <button class="result-btn" style="background:${t.bg2};border:2px solid ${t.border};color:${t.text}" onclick="backFromQuiz()">${fromScreen==='review'?'復習リストに戻る':fromScreen==='chapter'?'Chapterに戻る':'ホームに戻る'}</button>
       </div>
     </div>`;
 }
 
-function retryQuiz(){
-  startQuiz(shuffle(curQ));
-}
+function retryQuiz(){startQuiz(shuffle(curQ));}
 
 function goGlossary(){
-  show('glossary-screen');
+  showScreen('glossary-screen');
   const t=T();
   document.getElementById('gs-header').style.cssText=`padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;border-bottom:1px solid ${t.border};background:${t.bg}`;
   document.getElementById('gs-back').style.cssText=`width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;border:1px solid ${t.border};background:${t.bg2};color:${t.text2};flex-shrink:0`;
@@ -1028,8 +1163,7 @@ function renderGlossary(list){
   const presentRows=[...new Set(list.map(g=>rowMap[g.read[0]]||'その他'))];
   const sortedRows=rowOrder.filter(r=>presentRows.includes(r));
   const rowIndex=document.getElementById('gs-row-index');
-  rowIndex.innerHTML='';
-  rowIndex.style.cssText=`display:flex;flex-wrap:wrap;gap:4px;padding:0 1rem 10px`;
+  rowIndex.innerHTML='';rowIndex.style.cssText=`display:flex;flex-wrap:wrap;gap:4px;padding:0 1rem 10px`;
   sortedRows.forEach(row=>{
     const btn=document.createElement('button');
     btn.textContent=row;
@@ -1038,8 +1172,7 @@ function renderGlossary(list){
     rowIndex.appendChild(btn);
   });
   const listEl=document.getElementById('gs-list');
-  listEl.innerHTML='';
-  listEl.style.cssText=`padding:0 1rem 3rem;background:${t.bg}`;
+  listEl.innerHTML='';listEl.style.cssText=`padding:0 1rem 3rem;background:${t.bg}`;
   let curRow='';
   list.forEach(g=>{
     const row=rowMap[g.read[0]]||'その他';
@@ -1048,53 +1181,32 @@ function renderGlossary(list){
       const rowHdr=document.createElement('div');
       rowHdr.id='gs-row-'+row;
       rowHdr.style.cssText=`font-size:11px;font-weight:700;letter-spacing:0.1em;color:${t.text3};padding:16px 0 6px;border-bottom:1px solid ${t.border};margin-bottom:4px`;
-      rowHdr.textContent=row;
-      listEl.appendChild(rowHdr);
+      rowHdr.textContent=row;listEl.appendChild(rowHdr);
     }
     const starred=gsStarred.includes(g.term);
     const card=document.createElement('div');
     card.style.cssText=`border-radius:12px;background:${t.bg2};border:1px solid ${starred?'#F59E0B':t.border};margin-bottom:6px;overflow:hidden`;
-    // ヘッダー行
     const hdr=document.createElement('div');
     hdr.style.cssText=`padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer`;
     const starBtn=document.createElement('button');
     starBtn.textContent=starred?'★':'☆';
     starBtn.style.cssText=`font-size:18px;background:none;border:none;cursor:pointer;color:${starred?'#F59E0B':t.text3};padding:0;flex-shrink:0;line-height:1`;
-    starBtn.title=starred?'★を外す':'★を付ける';
     starBtn.onclick=(e)=>{e.stopPropagation();toggleStar(g.term);};
-    const termEl=document.createElement('div');
-    termEl.style.cssText=`font-size:15px;font-weight:700;color:${t.text};flex:1`;
-    termEl.textContent=g.term;
-    const readEl=document.createElement('div');
-    readEl.style.cssText=`font-size:11px;color:${t.text3}`;
-    readEl.textContent=g.read;
-    const chevEl=document.createElement('div');
-    chevEl.style.cssText=`color:${t.text3};font-size:16px;transition:transform 0.25s;flex-shrink:0`;
-    chevEl.textContent='›';
-    hdr.appendChild(starBtn);
-    hdr.appendChild(termEl);
-    hdr.appendChild(readEl);
-    hdr.appendChild(chevEl);
-    // 説明パネル
+    const termEl=document.createElement('div');termEl.style.cssText=`font-size:15px;font-weight:700;color:${t.text};flex:1`;termEl.textContent=g.term;
+    const readEl=document.createElement('div');readEl.style.cssText=`font-size:11px;color:${t.text3}`;readEl.textContent=g.read;
+    const chevEl=document.createElement('div');chevEl.style.cssText=`color:${t.text3};font-size:16px;transition:transform 0.25s;flex-shrink:0`;chevEl.textContent='›';
+    hdr.appendChild(starBtn);hdr.appendChild(termEl);hdr.appendChild(readEl);hdr.appendChild(chevEl);
     const desc=document.createElement('div');
     desc.style.cssText=`display:none;padding:4px 14px 14px 44px;font-size:13px;line-height:1.9;color:${t.text2};border-top:1px solid ${t.border}`;
     desc.textContent=g.desc;
     let open=false;
-    hdr.onclick=()=>{
-      open=!open;
-      desc.style.display=open?'block':'none';
-      chevEl.style.transform=open?'rotate(90deg)':'';
-    };
-    card.appendChild(hdr);
-    card.appendChild(desc);
-    listEl.appendChild(card);
+    hdr.onclick=()=>{open=!open;desc.style.display=open?'block':'none';chevEl.style.transform=open?'rotate(90deg)':'';};
+    card.appendChild(hdr);card.appendChild(desc);listEl.appendChild(card);
   });
 }
 
-
-function goHome(){show('home');loadRL();buildHome();}
-
-initTheme();loadRL();show('home');buildHome();
+initTheme();loadRL();
+switchTab('home');
 </script>
 </body>
 </html>
